@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: worm-kings-server
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run realtime
+    healthCheckPath: /api/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: MAX_ROOMS
+        value: "1"

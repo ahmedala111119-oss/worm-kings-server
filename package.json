@@ -1,0 +1,15 @@
+{
+  "name": "sites-worker-esm-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "validate": "node scripts/validate-artifact.mjs",
+    "realtime": "node realtime/server.js",
+    "test": "node tests/server.mjs && node tests/client.mjs && node tests/realtime.mjs && node tests/wire.mjs && node tests/settings.mjs",
+    "load:300": "node tests/load-300.mjs"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  }
+}
