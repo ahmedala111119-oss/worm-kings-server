@@ -2,12 +2,12 @@ import {makeRoom,makePlayer,R,tuning,growth,bodyScale,kill as originalKill} from
 import {SpatialGrid} from './spatial.js';
 export {makeRoom,makePlayer,R,tuning};
 const dist=(a,b)=>Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
-const bodyLength=w=>Math.min(tuning.maxLength,186+(tuning.maxLength-186)*growth(w));
+const bodyLength=w=>{const rules=w.rules||tuning,start=rules.startLength||186;return Math.min(rules.maxLength,start+(rules.maxLength-start)*growth(w))};
 const colors=['#63efbf','#ffb75a','#b59aff','#65caff','#ff769c','#fff18c'];
-function spot(){const angle=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*(R-100);return{x:Math.cos(angle)*r,y:Math.sin(angle)*r}}
-function pellet(room,p=spot(),value=1){room.food.push({...p,id:room.nextFood++,value,color:colors[Math.floor(Math.random()*6)],angle:Math.random()*.7-.35,kind:Math.floor(Math.random()*12)})}
+function spot(radius=R){const angle=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*(radius-100);return{x:Math.cos(angle)*r,y:Math.sin(angle)*r}}
+function pellet(room,p=spot(R*(room.rules?.mapScale||1)),value=1){room.food.push({...p,id:room.nextFood++,value,color:colors[Math.floor(Math.random()*6)],angle:Math.random()*.7-.35,kind:Math.floor(Math.random()*12)})}
 const cellRadius=12*(tuning.maxScale+tuning.maxScale)*.68;
-function followBody(w,dt,fast){
+function followBody(w,dt,fast){const tuning=w.rules||{};
  const spacing=3,length=bodyLength(w);w.spacing=spacing;
  if(!w.path)w.path=w.trail.map(p=>({...p}));
  const previous=w.path[0],travel=dist(w,previous);w.travel=(w.travel||0)+travel;
@@ -35,7 +35,7 @@ function followBody(w,dt,fast){
 
 }
 
-export function tick(room,dt=1/60){
+export function tick(room,dt=1/60){const tuning=room.rules,R=3600*Math.SQRT2*(tuning.mapScale||1),cellRadius=24*tuning.maxScale*.68;
  room.elapsed+=dt;const time=room.elapsed,foodGrid=room.foodGrid||(room.foodGrid=new SpatialGrid(160)),foodIndex=room.foodIndex||(room.foodIndex=new Map());foodGrid.clear();foodIndex.clear();
  for(let i=0;i<room.food.length;i++){foodGrid.add(room.food[i]);foodIndex.set(room.food[i],i)}
  function removeFood(f){const i=foodIndex.get(f);if(i===undefined)return;const last=room.food.pop();foodIndex.delete(f);if(last!==f){room.food[i]=last;foodIndex.set(last,i)}}
@@ -47,7 +47,7 @@ export function tick(room,dt=1/60){
  if(Math.hypot(w.x,w.y)>R-3*bodyScale(w)){die(w);continue}
  const radius=12*bodyScale(w)+8,multiplier=w.until.reduce((s,e)=>s+e.value,0)||1;
  for(const f of foodGrid.near(w.x,w.y,radius)){if(foodIndex.has(f)&&(w.x-f.x)**2+(w.y-f.y)**2<radius*radius){w.score+=f.value*multiplier;removeFood(f)}}
- for(let i=room.powerups.length-1;i>=0;i--){const p=room.powerups[i];if((w.x-p.x)**2+(w.y-p.y)**2<27*27){if(p.type==='speed')w.speedUntil=time+30;else if(p.type==='turn')w.turnUntil=time+30;else{const value=Number(p.type.slice(1)),existing=w.until.find(e=>e.value===value);if(existing)existing.until=time+30;else w.until.push({value,until:time+30})}room.powerups.splice(i,1);const pos=spot();room.powerups.push({...pos,id:room.nextFood++,type:['speed','turn','x2','x5','x10'][Math.floor(Math.random()*5)]})}}
+ for(let i=room.powerups.length-1;i>=0;i--){const p=room.powerups[i];if((w.x-p.x)**2+(w.y-p.y)**2<27*27){if(p.type==='speed')w.speedUntil=time+30;else if(p.type==='turn')w.turnUntil=time+30;else{const value=Number(p.type.slice(1)),existing=w.until.find(e=>e.value===value);if(existing)existing.until=time+30;else w.until.push({value,until:time+30})}room.powerups.splice(i,1);const pos=spot(R);room.powerups.push({...pos,id:room.nextFood++,type:['speed','turn','x2','x5','x10'][Math.floor(Math.random()*5)]})}}
  }
  const heads=room.headGrid||(room.headGrid=new SpatialGrid(80));heads.clear();room.players.forEach((w,index)=>{if(w.alive)heads.add(w,{w,index})});
  for(let i=0;i<room.players.length;i++){const a=room.players[i];if(!a.alive)continue;const candidates=[...heads.near(a.x,a.y,12*(tuning.maxScale*2)*.82)].filter(entry=>entry.index>i).sort((a,b)=>a.index-b.index);for(const {w:b} of candidates){if(!b.alive)continue;const r=12*(bodyScale(a)+bodyScale(b))*.82;if((a.x-b.x)**2+(a.y-b.y)**2<r*r){const delta=Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y);if(Math.abs(delta)<.01){die(a);die(b)}else{const win=delta>0?a:b;win.kills++;die(win===a?b:a)}if(!a.alive)break}}}
@@ -58,4 +58,5 @@ export function tick(room,dt=1/60){
  room.version++;return room;
 }
 export function intersects(w,focus,radius){const r=radius+12*bodyScale(w),r2=r*r;let previous=w;if((w.x-focus.x)**2+(w.y-focus.y)**2<=r2)return true;const bounds=w.bodyBounds;if(bounds&&(focus.x<bounds.minX-r||focus.x>bounds.maxX+r||focus.y<bounds.minY-r||focus.y>bounds.maxY+r))return false;for(const p of w.trail){const dx=p.x-previous.x,dy=p.y-previous.y,d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((focus.x-previous.x)*dx+(focus.y-previous.y)*dy)/d)):0;if((previous.x+dx*t-focus.x)**2+(previous.y+dy*t-focus.y)**2<=r2)return true;previous=p}return false}
-export function view(room,id){const self=room.players.find(w=>w.id===id);if(!self)return null;const radius=tuning.revealRadius,players=room.players.filter(w=>w.id===id||(w.alive&&intersects(w,self,radius))).map(w=>({id:w.id,x:w.x,y:w.y,a:w.a,score:w.score,kills:w.kills,name:w.name,color:w.color,skin:w.skin,skinImage:w.skinImage,alive:w.alive,spacing:w.spacing,trail:w.trail,until:w.until,speedUntil:w.speedUntil,turnUntil:w.turnUntil,vx:w.vx,vy:w.vy,turnVelocity:w.turnVelocity||0}));return{sentAt:Date.now(),version:room.version,elapsed:room.elapsed,selfId:id,players,food:room.food.filter(f=>(f.x-self.x)**2+(f.y-self.y)**2<radius*radius),powerups:room.powerups.filter(p=>(p.x-self.x)**2+(p.y-self.y)**2<(radius+30)**2),tuning,roomPopulation:room.players.filter(p=>p.alive).length}}
+export function view(room,id){const tuning=room.rules;const self=room.players.find(w=>w.id===id);if(!self)return null;const radius=tuning.revealRadius,players=room.players.filter(w=>w.id===id||(w.alive&&intersects(w,self,radius))).map(w=>({id:w.id,x:w.x,y:w.y,a:w.a,score:w.score,kills:w.kills,name:w.name,color:w.color,skin:w.skin,skinImage:w.skinImage,alive:w.alive,spacing:w.spacing,trail:w.trail,until:w.until,speedUntil:w.speedUntil,turnUntil:w.turnUntil,vx:w.vx,vy:w.vy,turnVelocity:w.turnVelocity||0}));return{sentAt:Date.now(),version:room.version,elapsed:room.elapsed,selfId:id,players,food:room.food.filter(f=>(f.x-self.x)**2+(f.y-self.y)**2<radius*radius),powerups:room.powerups.filter(p=>(p.x-self.x)**2+(p.y-self.y)**2<(radius+30)**2),tuning,arenaRadius:R*(tuning.mapScale||1),settingsRevision:room.settingsRevision,roomPopulation:room.players.filter(p=>p.alive).length}}
+
