@@ -1,5 +1,5 @@
 export const R=3600*Math.SQRT2;
-export const tuning={normalSpeed:125,boostSpeed:230,turnRate:3.4,sharpTurn:7,turnSmooth:.085,bodySlip:100,boostSlip:140,bodyDrift:30,bodyStability:100,maxLength:2600,maxScale:2.25,foodCount:2400,revealRadius:900};
+export const tuning={normalSpeed:125,boostSpeed:230,turnRate:3.4,sharpTurn:7,turnSmooth:.055,bodySlip:60,boostSlip:80,bodyDrift:30,bodyStability:100,maxLength:2600,maxScale:2.25,foodCount:2400,revealRadius:900};
 const baseTuning=tuning;
 const colors=['#63efbf','#ffb75a','#b59aff','#65caff','#ff769c','#fff18c'];
 const rand=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
