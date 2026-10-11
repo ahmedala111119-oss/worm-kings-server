@@ -15,9 +15,9 @@ try{
  assert.equal(game.rooms.size,1);assert.equal(b.roomPopulation,2);assert.equal(b.botPopulation,3);assert.equal(a.tuning.botCount,3);assert.equal(a.players.find(w=>w.id===a.selfId).score,80);
  assert.equal(room.rules.startLength,186*1.5);assert.equal(room.rules.maxScale,2.25*3);assert.equal(room.players.filter(w=>w.bot).every(w=>w.score===500),true);
  const humans=room.players.filter(w=>!w.bot);humans[1].x=humans[0].x+100;humans[1].y=humans[0].y;
- const ids=viewer=>view(room,viewer.id).players.filter(w=>w.bot).map(w=>w.id).sort();assert.deepEqual(ids(humans[0]),ids(humans[1]));assert.equal(ids(humans[0]).length,3);
+ const ids=viewer=>view(room,viewer.id).players.filter(w=>w.bot).map(w=>w.id).sort();const bots=room.players.filter(w=>w.bot);for(let i=0;i<bots.length;i++)for(let j=i+1;j<bots.length;j++)assert.ok(Math.hypot(bots[i].x-bots[j].x,bots[i].y-bots[j].y)>700,'Bots must spawn across the arena');
  const first=room.players.find(w=>w.bot),before={x:first.x,y:first.y};tick(room,1/60);assert.ok(Math.hypot(first.x-before.x,first.y-before.y)>0);
- first.alive=false;syncBots(room);room.elapsed+=3.1;syncBots(room);assert.equal(room.players.filter(w=>w.bot&&w.alive).length,3);
+ first.alive=false;syncBots(room);room.elapsed+=8.1;syncBots(room);assert.equal(room.players.filter(w=>w.bot&&w.alive).length,3);
  record={...record,settings:checkedSettings({...record.settings,botCount:1,botScore:900}),revision:'bots-1'};await fetch(`http://127.0.0.1:${address.port}/api/play-settings`);assert.equal(room.players.filter(w=>w.bot).length,1);assert.equal(room.players.find(w=>w.bot).score,900);assert.equal(room.players.filter(w=>!w.bot).length,2);
  record={...record,settings:checkedSettings({...record.settings,botCount:0}),revision:'bots-0'};await fetch(`http://127.0.0.1:${address.port}/api/play-settings`);assert.equal(room.players.filter(w=>w.bot).length,0);assert.equal(room.players.filter(w=>!w.bot).length,2);
  assert.throws(()=>checkedSettings({botCount:1.5}));assert.throws(()=>checkedSettings({botCount:25}));
